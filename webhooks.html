@@ -221,15 +221,27 @@
     }
 
     // Pull useful fields out of a Sublime webhook payload
-    // Sublime's webhook body shape may vary — this handles common fields gracefully
     function parseEvent(ev) {
-      const p = ev.payload || {};
+      const p  = ev.payload || {};
+      const d  = p.data    || {};
+
+      // Sublime can flag multiple rules on one message — show all of them
+      const rules    = d.flagged_rules || [];
+      const topRule  = rules[0] || {};
+      const allRules = rules.map(r => `${r.severity?.toUpperCase()}: ${r.name}`).join("\n") || "Unknown rule";
+
+      // Highest severity wins for the badge (critical > high > medium > low)
+      const sevOrder = ["critical", "high", "medium", "low"];
+      const severity = rules
+        .map(r => r.severity?.toLowerCase())
+        .sort((a, b) => sevOrder.indexOf(a) - sevOrder.indexOf(b))[0] || null;
+
       return {
-        rule:      p.rule?.name  || p.name       || "Unknown rule",
-        severity:  p.rule?.severity || p.severity || null,
-        sender:    p.message?.sender?.email || p.sender?.email || "—",
-        subject:   p.message?.subject      || p.subject       || "—",
-        recipient: (p.message?.recipients?.[0]) || "—",
+        rule:      allRules,
+        severity:  severity,
+        sender:    d.sender?.email?.email    || "—",
+        subject:   d.subject?.subject        || "—",
+        recipient: d.recipients?.to?.[0]?.email?.email || "—",
         time:      ev.received_at,
         raw:       ev.payload,
       };
@@ -259,7 +271,7 @@
         card.innerHTML = `
           <div class="event-header" onclick="toggle(${i})">
             <span class="sev ${sevClass(p.severity)}">${p.severity || "unknown"}</span>
-            <span class="event-rule">${escHtml(p.rule)}</span>
+            <span class="event-rule" style="white-space:pre-line">${escHtml(p.rule)}</span>
             <span class="event-time" data-time="${p.time}">${timeAgo(p.time)}</span>
             <span class="chevron" id="chev-${i}">&#9654;</span>
           </div>
@@ -321,9 +333,9 @@
       });
     }, 30000);
 
-    // Poll for new events every 9000 seconds
+    // Poll for new events every 5000 seconds
     fetchEvents();
-    setInterval(fetchEvents, 9000000);
+    setInterval(fetchEvents, 5000000);
   </script>
 </body>
 </html>
