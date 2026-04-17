@@ -326,12 +326,12 @@
       }
     }
 
-    // Refresh timestamps every 30s without re-fetching
+    // Refresh timestamps every 30000s without re-fetching
     setInterval(() => {
       document.querySelectorAll("[data-time]").forEach(el => {
         el.textContent = timeAgo(el.dataset.time);
       });
-    }, 30000);
+    }, 30000000);
 
     // Poll for new events every 5000 seconds
     fetchEvents();
