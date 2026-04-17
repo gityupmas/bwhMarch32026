@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sublime Webhooks — bradwillhelp.com</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f3;
+      color: #1a1a18;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 { font-size: 20px; font-weight: 500; }
+
+    .badges { display: flex; gap: 8px; align-items: center; }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .badge-live  { background: #d4f0e0; color: #1a6640; }
+    .badge-count { background: #e8e8e4; color: #5a5a56; }
+
+    .controls { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+
+    button {
+      font-size: 13px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid #d0d0cc;
+      background: #fff;
+      color: #1a1a18;
+      cursor: pointer;
+    }
+    button:hover { background: #f0f0ec; }
+    button.danger { color: #9a2020; border-color: #f0c0c0; }
+    button.danger:hover { background: #fdf0f0; }
+
+    .empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #888;
+      font-size: 14px;
+      border: 1px dashed #ccc;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .empty .sub { font-size: 12px; margin-top: 8px; color: #aaa; }
+
+    .status-bar {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 1rem;
+    }
+
+    /* Event cards */
+    .event {
+      background: #fff;
+      border: 1px solid #e0e0dc;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .event-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .event-header:hover { background: #f8f8f6; }
+
+    .sev {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .sev-critical { background: #fce8e8; color: #8b1a1a; }
+    .sev-high     { background: #fef0dc; color: #7a4400; }
+    .sev-medium   { background: #deeeff; color: #134080; }
+    .sev-low      { background: #e4f4dc; color: #2a5e18; }
+    .sev-unknown  { background: #ebebeb; color: #555; }
+
+    .event-rule {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .event-time { font-size: 12px; color: #999; white-space: nowrap; }
+
+    .chevron {
+      font-size: 11px;
+      color: #aaa;
+      transition: transform 0.15s;
+      flex-shrink: 0;
+    }
+    .chevron.open { transform: rotate(90deg); }
+
+    .event-body {
+      display: none;
+      border-top: 1px solid #e8e8e4;
+      padding: 12px 16px;
+    }
+    .event-body.open { display: block; }
+
+    .meta-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .pill {
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: 20px;
+      background: #f0f0ec;
+      color: #555;
+      border: 1px solid #e0e0dc;
+    }
+
+    pre {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 11.5px;
+      color: #444;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.6;
+      background: #f8f8f6;
+      border-radius: 8px;
+      padding: 10px 12px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body        { background: #1a1a18; color: #e0e0dc; }
+      button      { background: #2a2a28; border-color: #3a3a38; color: #e0e0dc; }
+      button:hover { background: #333330; }
+      .event      { background: #222220; border-color: #333330; }
+      .event-header:hover { background: #2a2a28; }
+      .badge-count { background: #333; color: #aaa; }
+      .empty      { background: #222; border-color: #444; }
+      .pill       { background: #2a2a28; color: #aaa; border-color: #3a3a38; }
+      pre         { background: #2a2a28; color: #c0c0bc; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <h1>Sublime webhook receiver</h1>
+      <div class="badges">
+        <span class="badge badge-live" id="live-badge">● live</span>
+        <span class="badge badge-count" id="count-badge">0 events</span>
+      </div>
+    </header>
+
+    <div class="controls">
+      <button onclick="fetchEvents()">Refresh now</button>
+      <button class="danger" onclick="clearEvents()">Clear all</button>
+    </div>
+
+    <p class="status-bar" id="status">Connecting...</p>
+
+    <div id="feed">
+      <div class="empty" id="empty-state">
+        Waiting for webhooks from Sublime
+        <div class="sub">Events will appear here automatically every 10 seconds</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================
+    // CHANGE THIS to your Worker URL after you deploy it
+    // e.g. "https://sublime-webhooks.bradwillhelp.workers.dev"
+    // or your custom route e.g. "https://webhook.bradwillhelp.com"
+    // ============================================================
+    const WORKER_URL = "https://YOUR-WORKER-NAME.YOUR-ACCOUNT.workers.dev";
+
+    let events = [];
+
+    function sevClass(s) {
+      if (!s) return "sev-unknown";
+      const m = { critical: "sev-critical", high: "sev-high", medium: "sev-medium", low: "sev-low" };
+      return m[s.toLowerCase()] || "sev-unknown";
+    }
+
+    function timeAgo(iso) {
+      const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
+      if (secs < 10)  return "just now";
+      if (secs < 60)  return secs + "s ago";
+      if (secs < 3600) return Math.floor(secs / 60) + "m ago";
+      return Math.floor(secs / 3600) + "h ago";
+    }
+
+    // Pull useful fields out of a Sublime webhook payload
+    // Sublime's webhook body shape may vary — this handles common fields gracefully
+    function parseEvent(ev) {
+      const p = ev.payload || {};
+      return {
+        rule:      p.rule?.name  || p.name       || "Unknown rule",
+        severity:  p.rule?.severity || p.severity || null,
+        sender:    p.message?.sender?.email || p.sender?.email || "—",
+        subject:   p.message?.subject      || p.subject       || "—",
+        recipient: (p.message?.recipients?.[0]) || "—",
+        time:      ev.received_at,
+        raw:       ev.payload,
+      };
+    }
+
+    function render() {
+      const feed = document.getElementById("feed");
+      const emptyState = document.getElementById("empty-state");
+      const countBadge = document.getElementById("count-badge");
+
+      countBadge.textContent = events.length + (events.length === 1 ? " event" : " events");
+
+      // Remove old cards but keep the empty state element
+      feed.querySelectorAll(".event").forEach(e => e.remove());
+
+      if (events.length === 0) {
+        emptyState.style.display = "block";
+        return;
+      }
+
+      emptyState.style.display = "none";
+
+      events.forEach((ev, i) => {
+        const p = parseEvent(ev);
+        const card = document.createElement("div");
+        card.className = "event";
+        card.innerHTML = `
+          <div class="event-header" onclick="toggle(${i})">
+            <span class="sev ${sevClass(p.severity)}">${p.severity || "unknown"}</span>
+            <span class="event-rule">${escHtml(p.rule)}</span>
+            <span class="event-time" data-time="${p.time}">${timeAgo(p.time)}</span>
+            <span class="chevron" id="chev-${i}">&#9654;</span>
+          </div>
+          <div class="event-body" id="body-${i}">
+            <div class="meta-row">
+              <span class="pill">from: ${escHtml(p.sender)}</span>
+              <span class="pill">subj: ${escHtml(p.subject)}</span>
+              <span class="pill">to: ${escHtml(p.recipient)}</span>
+            </div>
+            <pre>${escHtml(JSON.stringify(p.raw, null, 2))}</pre>
+          </div>`;
+        feed.appendChild(card);
+      });
+    }
+
+    function toggle(i) {
+      document.getElementById("body-" + i).classList.toggle("open");
+      document.getElementById("chev-" + i).classList.toggle("open");
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function fetchEvents() {
+      const status = document.getElementById("status");
+      try {
+        const res = await fetch(WORKER_URL);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        events = await res.json();
+        render();
+        status.textContent = "Last updated: " + new Date().toLocaleTimeString();
+      } catch (err) {
+        status.textContent = "Error fetching events: " + err.message;
+        console.error(err);
+      }
+    }
+
+    async function clearEvents() {
+      if (!confirm("Clear all events?")) return;
+      try {
+        await fetch(WORKER_URL + "?clear=1");
+        events = [];
+        render();
+        document.getElementById("status").textContent = "Cleared.";
+      } catch (err) {
+        alert("Error clearing: " + err.message);
+      }
+    }
+
+    // Refresh timestamps every 30s without re-fetching
+    setInterval(() => {
+      document.querySelectorAll("[data-time]").forEach(el => {
+        el.textContent = timeAgo(el.dataset.time);
+      });
+    }, 30000);
+
+    // Poll for new events every 10 seconds
+    fetchEvents();
+    setInterval(fetchEvents, 10000);
+  </script>
+</body>
+</html>
