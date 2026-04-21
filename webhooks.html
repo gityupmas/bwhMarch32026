@@ -5,81 +5,155 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sublime Webhooks — bradwillhelp.com</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg:        #0d0f12;
+      --surface:   #13161b;
+      --surface2:  #1a1e25;
+      --surface3:  #20252e;
+      --border:    #2a2f3a;
+      --border2:   #343b48;
+      --green:     #00c853;
+      --green-dim: #00c85322;
+      --teal:      #00bfa5;
+      --text:      #dde3ee;
+      --text-dim:  #7a8499;
+      --text-mute: #4a5268;
+      --critical:  #ff4444;
+      --crit-bg:   #ff444418;
+      --high:      #ff9500;
+      --high-bg:   #ff950018;
+      --medium:    #3d9eff;
+      --med-bg:    #3d9eff18;
+      --low:       #00c853;
+      --low-bg:    #00c85318;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f5f5f3;
-      color: #1a1a18;
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       padding: 2rem 1rem;
     }
 
-    .container { max-width: 860px; margin: 0 auto; }
+    /* ── scanline texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
 
+    .container { max-width: 920px; margin: 0 auto; }
+
+    /* ── header ── */
     header {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
     }
 
-    h1 { font-size: 20px; font-weight: 500; }
+    .header-left h1 {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+    .header-left .subtitle {
+      font-size: 11px;
+      color: var(--text-mute);
+      margin-top: 3px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
 
-    .badges { display: flex; gap: 8px; align-items: center; }
+    .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
     .badge {
-      font-size: 11px;
-      font-weight: 500;
+      font-size: 10px;
+      font-weight: 600;
       padding: 3px 10px;
-      border-radius: 20px;
+      border-radius: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
-    .badge-live  { background: #d4f0e0; color: #1a6640; }
-    .badge-count { background: #e8e8e4; color: #5a5a56; }
+    .badge-live  {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid #00c85344;
+      animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.6; }
+    }
+    .badge-count { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
 
-    .controls { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    /* ── controls ── */
+    .controls { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
 
     button {
-      font-size: 13px;
-      padding: 7px 14px;
-      border-radius: 8px;
-      border: 1px solid #d0d0cc;
-      background: #fff;
-      color: #1a1a18;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text-dim);
       cursor: pointer;
+      transition: all 0.15s;
     }
-    button:hover { background: #f0f0ec; }
-    button.danger { color: #9a2020; border-color: #f0c0c0; }
-    button.danger:hover { background: #fdf0f0; }
-
-    .empty {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: #888;
-      font-size: 14px;
-      border: 1px dashed #ccc;
-      border-radius: 12px;
-      background: #fff;
-    }
-
-    .empty .sub { font-size: 12px; margin-top: 8px; color: #aaa; }
+    button:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+    button.danger { color: var(--critical); border-color: #ff444433; }
+    button.danger:hover { background: var(--crit-bg); }
 
     .status-bar {
-      font-size: 12px;
-      color: #888;
+      font-size: 11px;
+      color: var(--text-mute);
       margin-bottom: 1rem;
+      font-family: 'IBM Plex Mono', monospace;
     }
 
-    /* Event cards */
-    .event {
-      background: #fff;
-      border: 1px solid #e0e0dc;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      overflow: hidden;
+    /* ── empty state ── */
+    .empty {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--text-mute);
+      font-size: 13px;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      background: var(--surface);
     }
+    .empty .sub { font-size: 11px; margin-top: 8px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; }
+
+    /* ── event card ── */
+    .event {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .event:hover { border-color: var(--border2); }
 
     .event-header {
       display: flex;
@@ -89,22 +163,25 @@
       cursor: pointer;
       user-select: none;
     }
-    .event-header:hover { background: #f8f8f6; }
+    .event-header:hover { background: var(--surface2); }
 
+    /* severity badge */
     .sev {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 9px;
-      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
       text-transform: uppercase;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.07em;
       white-space: nowrap;
+      font-family: 'IBM Plex Mono', monospace;
+      flex-shrink: 0;
     }
-    .sev-critical { background: #fce8e8; color: #8b1a1a; }
-    .sev-high     { background: #fef0dc; color: #7a4400; }
-    .sev-medium   { background: #deeeff; color: #134080; }
-    .sev-low      { background: #e4f4dc; color: #2a5e18; }
-    .sev-unknown  { background: #ebebeb; color: #555; }
+    .sev-critical { background: var(--crit-bg); color: var(--critical); border: 1px solid #ff444433; }
+    .sev-high     { background: var(--high-bg);  color: var(--high);     border: 1px solid #ff950033; }
+    .sev-medium   { background: var(--med-bg);   color: var(--medium);   border: 1px solid #3d9eff33; }
+    .sev-low      { background: var(--low-bg);   color: var(--low);      border: 1px solid #00c85333; }
+    .sev-unknown  { background: var(--surface3); color: var(--text-dim); border: 1px solid var(--border); }
 
     .event-rule {
       flex: 1;
@@ -113,178 +190,437 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: var(--text);
     }
 
-    .event-time { font-size: 12px; color: #999; white-space: nowrap; }
+    .event-subject {
+      font-size: 11px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+      font-style: italic;
+    }
+
+    .event-time {
+      font-size: 11px;
+      color: var(--text-mute);
+      white-space: nowrap;
+      font-family: 'IBM Plex Mono', monospace;
+    }
 
     .chevron {
-      font-size: 11px;
-      color: #aaa;
+      font-size: 10px;
+      color: var(--text-mute);
       transition: transform 0.15s;
       flex-shrink: 0;
     }
     .chevron.open { transform: rotate(90deg); }
 
+    /* ── expanded body ── */
     .event-body {
       display: none;
-      border-top: 1px solid #e8e8e4;
-      padding: 12px 16px;
+      border-top: 1px solid var(--border);
     }
     .event-body.open { display: block; }
 
-    .meta-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-    .pill {
-      font-size: 11px;
-      padding: 2px 9px;
-      border-radius: 20px;
-      background: #f0f0ec;
-      color: #555;
-      border: 1px solid #e0e0dc;
+    /* section grid */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
     }
+    @media (max-width: 600px) {
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+
+    .detail-section {
+      background: var(--surface);
+      padding: 14px 16px;
+    }
+    .detail-section.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .section-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-mute);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-bottom: 10px;
+    }
+
+    /* KV rows */
+    .kv { display: flex; flex-direction: column; gap: 6px; }
+    .kv-row { display: flex; gap: 8px; align-items: baseline; }
+    .kv-key {
+      font-size: 10px;
+      color: var(--text-mute);
+      font-family: 'IBM Plex Mono', monospace;
+      min-width: 72px;
+      flex-shrink: 0;
+    }
+    .kv-val {
+      font-size: 12px;
+      color: var(--text);
+      word-break: break-all;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+    .kv-val.highlight { color: var(--teal); }
+    .kv-val.critical  { color: var(--critical); }
+    .kv-val.benign    { color: var(--green); }
+
+    /* tags */
+    .tag-row { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--surface3);
+      color: var(--text-dim);
+      border: 1px solid var(--border2);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* rules list */
+    .rule-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .rule-item:last-child { border-bottom: none; }
+    .rule-name { font-size: 12px; color: var(--text); flex: 1; }
+    .rule-id   { font-size: 10px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; }
+
+    /* links list */
+    .link-item {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .link-item:last-child { border-bottom: none; }
+    .link-url { color: var(--teal); font-family: 'IBM Plex Mono', monospace; word-break: break-all; }
+    .link-meta { color: var(--text-mute); font-size: 10px; margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+
+    /* actions */
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .action-row:last-child { border-bottom: none; }
+    .action-name { font-size: 12px; color: var(--text); flex: 1; }
+    .action-type { font-size: 10px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; }
+    .action-status {
+      font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 1px 7px;
+      border-radius: 4px;
+    }
+    .status-in_progress { background: var(--high-bg);  color: var(--high);   border: 1px solid #ff950033; }
+    .status-pending     { background: var(--med-bg);   color: var(--medium); border: 1px solid #3d9eff33; }
+    .status-complete    { background: var(--low-bg);   color: var(--low);    border: 1px solid #00c85333; }
+    .status-failed      { background: var(--crit-bg);  color: var(--critical); border: 1px solid #ff444433; }
+
+    /* raw JSON toggle */
+    .raw-toggle {
+      font-size: 11px;
+      color: var(--text-mute);
+      cursor: pointer;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+    .raw-toggle:hover { color: var(--text-dim); background: var(--surface2); }
+
+    .raw-json {
+      display: none;
+      padding: 0 16px 14px;
+      background: var(--surface);
+    }
+    .raw-json.open { display: block; }
 
     pre {
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 11.5px;
-      color: #444;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
       white-space: pre-wrap;
       word-break: break-all;
-      line-height: 1.6;
-      background: #f8f8f6;
-      border-radius: 8px;
-      padding: 10px 12px;
-      max-height: 320px;
+      line-height: 1.7;
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 12px;
+      max-height: 300px;
       overflow-y: auto;
+      border: 1px solid var(--border);
     }
 
-    @media (prefers-color-scheme: dark) {
-      body        { background: #1a1a18; color: #e0e0dc; }
-      button      { background: #2a2a28; border-color: #3a3a38; color: #e0e0dc; }
-      button:hover { background: #333330; }
-      .event      { background: #222220; border-color: #333330; }
-      .event-header:hover { background: #2a2a28; }
-      .badge-count { background: #333; color: #aaa; }
-      .empty      { background: #222; border-color: #444; }
-      .pill       { background: #2a2a28; color: #aaa; border-color: #3a3a38; }
-      pre         { background: #2a2a28; color: #c0c0bc; }
+    /* attack score chip */
+    .score-chip {
+      display: inline-block;
+      font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 2px 8px;
+      border-radius: 4px;
     }
+    .score-malicious    { background: var(--crit-bg);  color: var(--critical); }
+    .score-suspicious   { background: var(--high-bg);  color: var(--high); }
+    .score-likely_benign{ background: var(--low-bg);   color: var(--low); }
+    .score-benign       { background: var(--low-bg);   color: var(--low); }
+    .score-unknown      { background: var(--surface3); color: var(--text-dim); }
   </style>
 </head>
 <body>
   <div class="container">
 
     <header>
-      <h1>Sublime webhook receiver</h1>
-      <div class="badges">
+      <div class="header-left">
+        <h1>Sublime webhook receiver</h1>
+        <div class="subtitle">bradwillhelp.com · na-east-3</div>
+      </div>
+      <div class="header-right">
         <span class="badge badge-live" id="live-badge">● live</span>
         <span class="badge badge-count" id="count-badge">0 events</span>
       </div>
     </header>
 
     <div class="controls">
-      <button onclick="fetchEvents()">Refresh now</button>
-      <button class="danger" onclick="clearEvents()">Clear all</button>
+      <button onclick="fetchEvents()">↻ Refresh</button>
+      <button class="danger" onclick="clearEvents()">✕ Clear all</button>
     </div>
 
     <p class="status-bar" id="status">Connecting...</p>
 
     <div id="feed">
       <div class="empty" id="empty-state">
-        Waiting for webhooks from Sublime
-        <div class="sub">Events will appear here automatically every 10 seconds</div>
+        No webhook events yet
+        <div class="sub">Events will appear here automatically · polling every 10s</div>
       </div>
     </div>
 
   </div>
 
   <script>
-    // ============================================================
-    // CHANGE THIS to your Worker URL after you deploy it
-    // e.g. "https://sublime-webhooks.bradwillhelp.workers.dev"
-    // or your custom route e.g. "https://webhook.bradwillhelp.com"
-    // ============================================================
     const WORKER_URL = "https://webhook.bradwillhelp.com";
 
     let events = [];
 
     function sevClass(s) {
       if (!s) return "sev-unknown";
-      const m = { critical: "sev-critical", high: "sev-high", medium: "sev-medium", low: "sev-low" };
-      return m[s.toLowerCase()] || "sev-unknown";
+      return { critical: "sev-critical", high: "sev-high", medium: "sev-medium", low: "sev-low" }[s.toLowerCase()] || "sev-unknown";
+    }
+
+    function scoreClass(s) {
+      if (!s) return "score-unknown";
+      return "score-" + s.toLowerCase().replace(/\s+/g, '_');
     }
 
     function timeAgo(iso) {
       const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
-      if (secs < 10)  return "just now";
-      if (secs < 60)  return secs + "s ago";
+      if (secs < 10)   return "just now";
+      if (secs < 60)   return secs + "s ago";
       if (secs < 3600) return Math.floor(secs / 60) + "m ago";
       return Math.floor(secs / 3600) + "h ago";
     }
 
-    // Pull useful fields out of a Sublime webhook payload
+    function fmtTime(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      return d.toLocaleDateString() + " " + d.toLocaleTimeString();
+    }
+
+    function escHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
     function parseEvent(ev) {
-      const p  = ev.payload || {};
-      const d  = p.data    || {};
-
-      // Sublime can flag multiple rules on one message — show all of them
+      const p = ev.payload || {};
+      const d = p.data   || {};
       const rules    = d.flagged_rules || [];
-      const topRule  = rules[0] || {};
-      const allRules = rules.map(r => `${r.severity?.toUpperCase()}: ${r.name}`).join("\n") || "Unknown rule";
-
-      // Highest severity wins for the badge (critical > high > medium > low)
       const sevOrder = ["critical", "high", "medium", "low"];
       const severity = rules
         .map(r => r.severity?.toLowerCase())
         .sort((a, b) => sevOrder.indexOf(a) - sevOrder.indexOf(b))[0] || null;
-
       return {
-        rule:      allRules,
-        severity:  severity,
-        sender:    d.sender?.email?.email    || "—",
-        subject:   d.subject?.subject        || "—",
-        recipient: d.recipients?.to?.[0]?.email?.email || "—",
-        time:      ev.received_at,
-        raw:       ev.payload,
+        severity,
+        rules,
+        sender:        d.sender?.email?.email || "—",
+        senderName:    d.sender?.display_name || "",
+        subject:       d.subject?.subject || "—",
+        recipient:     d.recipients?.to?.[0]?.email?.email || "—",
+        recipientName: d.recipients?.to?.[0]?.display_name || "",
+        links:         d.body?.links || [],
+        actions:       d.triggered_actions || [],
+        attackScore:   d.attack_score_verdict || null,
+        messageId:     d.message?.id || null,
+        landedInSpam:  d.message?.landed_in_spam ?? null,
+        time:          ev.received_at,
+        raw:           ev.payload,
       };
     }
 
+    function buildLinkItem(link) {
+      const url    = link.href_url?.url || link.display_url?.url || "—";
+      const domain = link.href_url?.domain?.domain || "—";
+      const root   = link.href_url?.domain?.root_domain || "";
+      const parser = link.parser || "";
+      const mismatched = link.mismatched ? ' <span style="color:var(--critical)">⚠ mismatched</span>' : '';
+      return `<div class="link-item">
+        <div class="link-url">${escHtml(url)}${mismatched}</div>
+        <div class="link-meta">domain: ${escHtml(domain)}${root && root !== domain ? " · root: " + escHtml(root) : ""} · parser: ${escHtml(parser)}</div>
+      </div>`;
+    }
+
+    function buildRuleItem(rule) {
+      const sev = rule.severity?.toLowerCase() || "unknown";
+      const tags = (rule.tags || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join("");
+      return `<div class="rule-item">
+        <span class="sev ${sevClass(sev)}">${escHtml(sev)}</span>
+        <div style="flex:1">
+          <div class="rule-name">${escHtml(rule.name || "Unnamed rule")}</div>
+          ${tags ? `<div class="tag-row" style="margin-top:4px">${tags}</div>` : ""}
+        </div>
+        <div class="rule-id">${escHtml((rule.id || "").substring(0, 8))}…</div>
+      </div>`;
+    }
+
+    function buildActionRow(action) {
+      const statusCls = "action-status status-" + (action.status || "unknown").toLowerCase().replace(/\s+/g, '_');
+      return `<div class="action-row">
+        <div class="action-name">${escHtml(action.name || "—")}</div>
+        <div class="action-type">${escHtml(action.type || "")}</div>
+        <span class="${statusCls}">${escHtml(action.status || "—")}</span>
+      </div>`;
+    }
+
+    function renderCard(ev, i) {
+      const p = parseEvent(ev);
+      const topRule = p.rules[0]?.name || "Unknown rule";
+
+      const rulesHtml   = p.rules.map(buildRuleItem).join("") || '<div style="color:var(--text-mute);font-size:12px">No rules</div>';
+      const linksHtml   = p.links.length
+        ? p.links.map(buildLinkItem).join("")
+        : '<div style="color:var(--text-mute);font-size:12px">No links detected</div>';
+      const actionsHtml = p.actions.map(buildActionRow).join("") || '<div style="color:var(--text-mute);font-size:12px">None</div>';
+
+      const scoreChip = p.attackScore
+        ? `<span class="score-chip ${scoreClass(p.attackScore)}">${escHtml(p.attackScore)}</span>`
+        : "";
+
+      const spamVal = p.landedInSpam === null ? "—"
+        : p.landedInSpam ? '<span style="color:var(--critical)">yes</span>'
+        : '<span style="color:var(--green)">no</span>';
+
+      const card = document.createElement("div");
+      card.className = "event";
+      card.innerHTML = `
+        <div class="event-header" onclick="toggle(${i})">
+          <span class="sev ${sevClass(p.severity)}">${escHtml(p.severity || "unknown")}</span>
+          <span class="event-rule">${escHtml(topRule)}${p.rules.length > 1 ? ` <span style="color:var(--text-mute);font-size:11px">+${p.rules.length - 1} more</span>` : ""}</span>
+          <span class="event-subject" title="${escHtml(p.subject)}">${escHtml(p.subject)}</span>
+          <span class="event-time" data-time="${p.time}">${timeAgo(p.time)}</span>
+          <span class="chevron" id="chev-${i}">&#9654;</span>
+        </div>
+
+        <div class="event-body" id="body-${i}">
+          <div class="detail-grid">
+
+            <!-- Sender -->
+            <div class="detail-section">
+              <div class="section-label">Sender</div>
+              <div class="kv">
+                <div class="kv-row"><span class="kv-key">email</span><span class="kv-val highlight">${escHtml(p.sender)}</span></div>
+                ${p.senderName ? `<div class="kv-row"><span class="kv-key">name</span><span class="kv-val">${escHtml(p.senderName)}</span></div>` : ""}
+              </div>
+            </div>
+
+            <!-- Recipient -->
+            <div class="detail-section">
+              <div class="section-label">Recipient</div>
+              <div class="kv">
+                <div class="kv-row"><span class="kv-key">email</span><span class="kv-val highlight">${escHtml(p.recipient)}</span></div>
+                ${p.recipientName ? `<div class="kv-row"><span class="kv-key">name</span><span class="kv-val">${escHtml(p.recipientName)}</span></div>` : ""}
+              </div>
+            </div>
+
+            <!-- Message -->
+            <div class="detail-section">
+              <div class="section-label">Message</div>
+              <div class="kv">
+                <div class="kv-row"><span class="kv-key">subject</span><span class="kv-val">${escHtml(p.subject)}</span></div>
+                <div class="kv-row"><span class="kv-key">received</span><span class="kv-val">${escHtml(fmtTime(p.time))}</span></div>
+                <div class="kv-row"><span class="kv-key">in spam</span><span class="kv-val">${spamVal}</span></div>
+                ${p.messageId ? `<div class="kv-row"><span class="kv-key">msg id</span><span class="kv-val" style="font-size:10px">${escHtml(p.messageId)}</span></div>` : ""}
+              </div>
+            </div>
+
+            <!-- Attack Score -->
+            <div class="detail-section">
+              <div class="section-label">Analysis</div>
+              <div class="kv">
+                <div class="kv-row"><span class="kv-key">verdict</span><span class="kv-val">${scoreChip || "—"}</span></div>
+                <div class="kv-row"><span class="kv-key">rules hit</span><span class="kv-val">${p.rules.length}</span></div>
+                <div class="kv-row"><span class="kv-key">links</span><span class="kv-val">${p.links.length}</span></div>
+                <div class="kv-row"><span class="kv-key">actions</span><span class="kv-val">${p.actions.length}</span></div>
+              </div>
+            </div>
+
+            <!-- Flagged Rules -->
+            <div class="detail-section full-width">
+              <div class="section-label">Flagged Rules</div>
+              ${rulesHtml}
+            </div>
+
+            <!-- Links -->
+            <div class="detail-section full-width">
+              <div class="section-label">Links in Message (${p.links.length})</div>
+              ${linksHtml}
+            </div>
+
+            <!-- Triggered Actions -->
+            <div class="detail-section full-width">
+              <div class="section-label">Triggered Actions</div>
+              ${actionsHtml}
+            </div>
+
+          </div>
+
+          <!-- Raw JSON toggle -->
+          <div class="raw-toggle" onclick="toggleRaw(${i})">
+            <span id="raw-chev-${i}">▶</span> raw payload
+          </div>
+          <div class="raw-json" id="raw-${i}">
+            <pre>${escHtml(JSON.stringify(p.raw, null, 2))}</pre>
+          </div>
+        </div>`;
+      return card;
+    }
+
     function render() {
-      const feed = document.getElementById("feed");
+      const feed       = document.getElementById("feed");
       const emptyState = document.getElementById("empty-state");
       const countBadge = document.getElementById("count-badge");
 
       countBadge.textContent = events.length + (events.length === 1 ? " event" : " events");
-
-      // Remove old cards but keep the empty state element
       feed.querySelectorAll(".event").forEach(e => e.remove());
 
-      if (events.length === 0) {
-        emptyState.style.display = "block";
-        return;
-      }
-
+      if (events.length === 0) { emptyState.style.display = "block"; return; }
       emptyState.style.display = "none";
-
-      events.forEach((ev, i) => {
-        const p = parseEvent(ev);
-        const card = document.createElement("div");
-        card.className = "event";
-        card.innerHTML = `
-          <div class="event-header" onclick="toggle(${i})">
-            <span class="sev ${sevClass(p.severity)}">${p.severity || "unknown"}</span>
-            <span class="event-rule" style="white-space:pre-line">${escHtml(p.rule)}</span>
-            <span class="event-time" data-time="${p.time}">${timeAgo(p.time)}</span>
-            <span class="chevron" id="chev-${i}">&#9654;</span>
-          </div>
-          <div class="event-body" id="body-${i}">
-            <div class="meta-row">
-              <span class="pill">from: ${escHtml(p.sender)}</span>
-              <span class="pill">subj: ${escHtml(p.subject)}</span>
-              <span class="pill">to: ${escHtml(p.recipient)}</span>
-            </div>
-            <pre>${escHtml(JSON.stringify(p.raw, null, 2))}</pre>
-          </div>`;
-        feed.appendChild(card);
-      });
+      events.forEach((ev, i) => feed.appendChild(renderCard(ev, i)));
     }
 
     function toggle(i) {
@@ -292,12 +628,11 @@
       document.getElementById("chev-" + i).classList.toggle("open");
     }
 
-    function escHtml(str) {
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+    function toggleRaw(i) {
+      const el   = document.getElementById("raw-" + i);
+      const chev = document.getElementById("raw-chev-" + i);
+      el.classList.toggle("open");
+      chev.textContent = el.classList.contains("open") ? "▼" : "▶";
     }
 
     async function fetchEvents() {
@@ -307,9 +642,9 @@
         if (!res.ok) throw new Error("HTTP " + res.status);
         events = await res.json();
         render();
-        status.textContent = "Last updated: " + new Date().toLocaleTimeString();
+        status.textContent = "last updated · " + new Date().toLocaleTimeString();
       } catch (err) {
-        status.textContent = "Error fetching events: " + err.message;
+        status.textContent = "error: " + err.message;
         console.error(err);
       }
     }
@@ -320,22 +655,22 @@
         await fetch(WORKER_URL + "?clear=1");
         events = [];
         render();
-        document.getElementById("status").textContent = "Cleared.";
+        document.getElementById("status").textContent = "cleared.";
       } catch (err) {
         alert("Error clearing: " + err.message);
       }
     }
 
-    // Refresh timestamps every 30000s without re-fetching
+    // Refresh timestamps
     setInterval(() => {
       document.querySelectorAll("[data-time]").forEach(el => {
         el.textContent = timeAgo(el.dataset.time);
       });
-    }, 30000000);
+    }, 30000);
 
-    // Poll for new events every 5000 seconds
+    // Poll every 10s
     fetchEvents();
-    setInterval(fetchEvents, 5000000);
+    setInterval(fetchEvents, 10000);
   </script>
 </body>
 </html>
