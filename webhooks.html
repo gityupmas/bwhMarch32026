@@ -380,6 +380,114 @@
     .score-likely_benign{ background: var(--low-bg);   color: var(--low); }
     .score-benign       { background: var(--low-bg);   color: var(--low); }
     .score-unknown      { background: var(--surface3); color: var(--text-dim); }
+
+    /* ── attachments ── */
+    .attachment-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: flex-start;
+    }
+    .attachment-item:last-child { border-bottom: none; }
+
+    .attachment-thumb {
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .attachment-thumb:hover { opacity: 0.85; }
+
+    .attachment-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      background: var(--surface3);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .attachment-icon-ext {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+    .attachment-icon-label {
+      font-size: 9px;
+      color: var(--text-mute);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .attachment-meta { flex: 1; min-width: 0; }
+    .attachment-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 6px;
+    }
+    .attachment-details { display: flex; flex-direction: column; gap: 4px; }
+    .attachment-row {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .attachment-key {
+      font-size: 10px;
+      color: var(--text-mute);
+      font-family: 'IBM Plex Mono', monospace;
+      min-width: 52px;
+      flex-shrink: 0;
+    }
+    .attachment-val {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      word-break: break-all;
+    }
+
+    /* image lightbox */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+    .lightbox-close {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      color: var(--text-dim);
+      font-size: 24px;
+      cursor: pointer;
+      font-family: 'IBM Plex Mono', monospace;
+      z-index: 10001;
+    }
   </style>
 </head>
 <body>
@@ -412,10 +520,25 @@
 
   </div>
 
+  <!-- Lightbox for image attachments -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <span class="lightbox-close">✕</span>
+    <img id="lightbox-img" src="" alt="Attachment preview" />
+  </div>
+
   <script>
     const WORKER_URL = "https://webhook.bradwillhelp.com";
 
     let events = [];
+
+    function openLightbox(src) {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox').classList.add('open');
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.getElementById('lightbox-img').src = '';
+    }
 
     function sevClass(s) {
       if (!s) return "sev-unknown";
@@ -465,6 +588,7 @@
         recipientName: d.recipients?.to?.[0]?.display_name || "",
         links:         d.body?.links || [],
         actions:       d.triggered_actions || [],
+        attachments:   d.attachments || [],
         attackScore:   d.attack_score_verdict || null,
         messageId:     d.message?.id || null,
         landedInSpam:  d.message?.landed_in_spam ?? null,
@@ -482,6 +606,62 @@
       return `<div class="link-item">
         <div class="link-url">${escHtml(url)}${mismatched}</div>
         <div class="link-meta">domain: ${escHtml(domain)}${root && root !== domain ? " · root: " + escHtml(root) : ""} · parser: ${escHtml(parser)}</div>
+      </div>`;
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return "—";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function isImageType(contentType, ext) {
+      const imgTypes = ["image/jpeg","image/png","image/gif","image/webp","image/bmp"];
+      const imgExts  = ["jpg","jpeg","png","gif","webp","bmp"];
+      return imgTypes.includes((contentType||"").toLowerCase()) || imgExts.includes((ext||"").toLowerCase());
+    }
+
+    function buildAttachmentItem(att, idx) {
+      const isImg  = isImageType(att.content_type, att.file_extension);
+      const src    = isImg && att.raw ? `data:${att.content_type || 'image/jpeg'};base64,${att.raw}` : null;
+      const thumbId = `thumb-${idx}-${Math.random().toString(36).slice(2)}`;
+
+      const thumbHtml = src
+        ? `<img class="attachment-thumb" id="${thumbId}" src="${src}" alt="${escHtml(att.file_name || 'attachment')}" onclick="openLightbox(this.src)" title="Click to enlarge" />`
+        : `<div class="attachment-icon">
+             <span class="attachment-icon-ext">${escHtml(att.file_extension || '?')}</span>
+             <span class="attachment-icon-label">${escHtml(att.file_type || 'file')}</span>
+           </div>`;
+
+      return `<div class="attachment-item">
+        ${thumbHtml}
+        <div class="attachment-meta">
+          <div class="attachment-name" title="${escHtml(att.file_name || '—')}">${escHtml(att.file_name || '—')}</div>
+          <div class="attachment-details">
+            <div class="attachment-row">
+              <span class="attachment-key">type</span>
+              <span class="attachment-val">${escHtml(att.content_type || att.file_type || '—')}</span>
+            </div>
+            <div class="attachment-row">
+              <span class="attachment-key">size</span>
+              <span class="attachment-val">${formatBytes(att.size)}</span>
+            </div>
+            <div class="attachment-row">
+              <span class="attachment-key">md5</span>
+              <span class="attachment-val">${escHtml(att.md5 || '—')}</span>
+            </div>
+            <div class="attachment-row">
+              <span class="attachment-key">sha256</span>
+              <span class="attachment-val" style="font-size:9px">${escHtml(att.sha256 || '—')}</span>
+            </div>
+            ${att.content_transfer_encoding ? `
+            <div class="attachment-row">
+              <span class="attachment-key">encoding</span>
+              <span class="attachment-val">${escHtml(att.content_transfer_encoding)}</span>
+            </div>` : ''}
+          </div>
+        </div>
       </div>`;
     }
 
@@ -511,11 +691,14 @@
       const p = parseEvent(ev);
       const topRule = p.rules[0]?.name || "Unknown rule";
 
-      const rulesHtml   = p.rules.map(buildRuleItem).join("") || '<div style="color:var(--text-mute);font-size:12px">No rules</div>';
-      const linksHtml   = p.links.length
+      const rulesHtml      = p.rules.map(buildRuleItem).join("") || '<div style="color:var(--text-mute);font-size:12px">No rules</div>';
+      const linksHtml      = p.links.length
         ? p.links.map(buildLinkItem).join("")
         : '<div style="color:var(--text-mute);font-size:12px">No links detected</div>';
-      const actionsHtml = p.actions.map(buildActionRow).join("") || '<div style="color:var(--text-mute);font-size:12px">None</div>';
+      const actionsHtml    = p.actions.map(buildActionRow).join("") || '<div style="color:var(--text-mute);font-size:12px">None</div>';
+      const attachHtml     = p.attachments.length
+        ? p.attachments.map((a, i) => buildAttachmentItem(a, i)).join("")
+        : '<div style="color:var(--text-mute);font-size:12px">No attachments</div>';
 
       const scoreChip = p.attackScore
         ? `<span class="score-chip ${scoreClass(p.attackScore)}">${escHtml(p.attackScore)}</span>`
@@ -575,6 +758,7 @@
                 <div class="kv-row"><span class="kv-key">verdict</span><span class="kv-val">${scoreChip || "—"}</span></div>
                 <div class="kv-row"><span class="kv-key">rules hit</span><span class="kv-val">${p.rules.length}</span></div>
                 <div class="kv-row"><span class="kv-key">links</span><span class="kv-val">${p.links.length}</span></div>
+                <div class="kv-row"><span class="kv-key">attachments</span><span class="kv-val">${p.attachments.length}</span></div>
                 <div class="kv-row"><span class="kv-key">actions</span><span class="kv-val">${p.actions.length}</span></div>
               </div>
             </div>
@@ -589,6 +773,12 @@
             <div class="detail-section full-width">
               <div class="section-label">Links in Message (${p.links.length})</div>
               ${linksHtml}
+            </div>
+
+            <!-- Attachments -->
+            <div class="detail-section full-width">
+              <div class="section-label">Attachments (${p.attachments.length})</div>
+              ${attachHtml}
             </div>
 
             <!-- Triggered Actions -->
